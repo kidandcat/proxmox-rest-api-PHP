@@ -5,16 +5,14 @@
  *
  *  @author Jairo Caro-Accino Viciana <kidandcat@gmail.com>
  */
+ 
 namespace Netelip\vpsBundle\Utilities;
-
 
 //DEBUG ONLY  DEBUG ONLY  DEBUG ONLY  DEBUG ONLY
 //DEBUG ONLY  DEBUG ONLY  DEBUG ONLY  DEBUG ONLY
 require 'vendor/autoload.php';
 //DEBUG ONLY  DEBUG ONLY  DEBUG ONLY  DEBUG ONLY
 //DEBUG ONLY  DEBUG ONLY  DEBUG ONLY  DEBUG ONLY
-
-
 
 ///////////////////////////////////////////////////////////////
 //                       Composer                            //
@@ -37,8 +35,6 @@ require 'vendor/autoload.php';
 //                                                           //
 ///////////////////////////////////////////////////////////////
 
-
-
 class vpsApi
 {
     private $ERROR_MODE = 'return'; // return | exception
@@ -48,11 +44,11 @@ class vpsApi
     public function __construct($url = null, $errorMode = null)
     {
         $this->client = new \GuzzleHttp\Client();
-        if($errorMode){
-          $this->ERROR_MODE = $errorMode;
+        if ($errorMode) {
+            $this->ERROR_MODE = $errorMode;
         }
-        if($url){
-          $this->$url = $url;
+        if ($url) {
+            $this->$url = $url;
         }
 
         return true;
@@ -119,7 +115,7 @@ class vpsApi
             return $ok;
         }
 
-        $res = $this->client->request('GET', $this->url.'user'.((!empty($params['username']))?'?username='.$params['username']:''));
+        $res = $this->client->request('GET', $this->url.'user'.((!empty($params['username'])) ? '?username='.$params['username'] : ''));
 
         return $this->response($res);
     }
@@ -132,7 +128,7 @@ class vpsApi
         }
 
         $res = $this->client->request('POST', $this->url.'user', [
-          'json' => $params
+          'json' => $params,
         ]);
 
         return $this->response($res);
@@ -146,7 +142,7 @@ class vpsApi
         }
 
         $res = $this->client->request('DELETE', $this->url.'user', [
-          'json' => $params
+          'json' => $params,
         ]);
 
         return $this->response($res);
@@ -160,7 +156,7 @@ class vpsApi
         }
 
         $res = $this->client->request('PUT', $this->url.'user', [
-          'json' => $params
+          'json' => $params,
         ]);
 
         return $this->response($res);
@@ -177,7 +173,7 @@ class vpsApi
         }
 
         $res = $this->client->request('POST', $this->url.'container', [
-          'json' => $params
+          'json' => $params,
         ]);
 
         return $this->response($res);
@@ -191,7 +187,7 @@ class vpsApi
         }
 
         $res = $this->client->request('DELETE', $this->url.'container', [
-          'json' => $params
+          'json' => $params,
         ]);
 
         return $this->response($res);
@@ -205,23 +201,66 @@ class vpsApi
         }
 
         $res = $this->client->request('GET', $this->url.'container', [
-          'query' => $params
+          'query' => $params,
         ]);
 
         return $this->response($res);
     }
 
+    /////////////////
+    //    utils    //
+    /////////////////
+    public function utilsBrowserTerminal($params)
+    {
+        $ok = $this->checkParams($params, ['id']);
+        if ($ok != 'OK') {
+            return $ok;
+        }
 
+        $auth = $this->authetincationTicket();
+
+        $res = $this->client->request('GET', $this->url.'utils/vnc', [
+          'query' => $params,
+        ]);
+
+        $response = $this->response($res);
+
+        $response->header = ['CSRFPreventionToken' => $auth->CSRF];
+        $response->cookie = ['PVEAuthCookie' => $auth->ticket];
+
+        return $response;
+    }
+
+    public function utilsGraphicsData($params)
+    {
+        $ok = $this->checkParams($params, ['id']);
+        if ($ok != 'OK') {
+            return $ok;
+        }
+
+        $res = $this->client->request('GET', $this->url.'utils/graphic', [
+          'query' => $params,
+        ]);
+
+        return $this->response($res);
+    }
 
     ///////////////
     //  Private  //
     ///////////////
+    private function authetincationTicket()
+    {
+        $res = $this->client->request('GET', $this->url.'utils/ticket');
+
+        return $this->response($res);
+    }
+
     private function response($res)
     {
         if ($res->getStatusCode() == 200) {
             return json_decode($res->getBody());
         } else {
-            return $res;
+            return $res->statusCode();
         }
     }
 
@@ -232,20 +271,20 @@ class vpsApi
         if (!is_array($params)) {
             $error = true;
             $msg = 'Parameters must be passed as an associative Array';
-        }else{
-          foreach ($expected as $par) {
-            if (!array_key_exists($par, $params)) {
-              $error = true;
-              $msg = debug_backtrace()[1]['function'].": Expected parameter $par";
+        } else {
+            foreach ($expected as $par) {
+                if (!array_key_exists($par, $params)) {
+                    $error = true;
+                    $msg = debug_backtrace()[1]['function'].": Expected parameter $par";
+                }
             }
-          }
         }
 
-        if($error && $this->ERROR_MODE == 'return'){
-          return $msg;
+        if ($error && $this->ERROR_MODE == 'return') {
+            return $msg;
         }
-        if($error && $this->ERROR_MODE == 'exception'){
-          throw new \Exception($msg);
+        if ($error && $this->ERROR_MODE == 'exception') {
+            throw new \Exception($msg);
         }
 
         return 'OK';
